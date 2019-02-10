@@ -1,0 +1,51 @@
+
+
+**IMPORTANT I CLEAR AND REPOPULATE THE DATABASE ON EVERY START OF THE SERVER**
+
+
+
+Calling a post photo request twice is a bad request. The user should call delete endpoint before posting again.
+
+patching a user without a json body is technically a valid patch. Similarly, updating an auction with no json is also valid but no changes will be made.
+
+A seller cannot bid on their own auction.
+
+I am actively enforcing the database varchar length constratints to prevent comparison issues in particular sql queries, e.g. comparing a username stored in the db with the same which has exceeded the varchar limit will fail the comparison.
+
+If the user searches for a photo for an auction that doesnt exists, or a photo for the auction does not exist, a default 'Photo not found' 200 message will be sent with a default image.
+
+requesting  a history of bids of an auction with no bids is a trivialy valid request. an emtpy array is returned.
+
+A malformed request is not only a request with missing keys, but one with malformed keys e.g. if the key is meant to be an int such as '23' but has the value 'abc happy flying jack!'. Thus I will return an error 400 - malformed body/Bad request status code. If the sql query returns an error (such as trying to insert a duplicate row) the I will return a 500 error code.
+
+the provided 'starting bid' in the create auction api is intended to be the starting price in the database, not zero. This simplifies bid checking and reflects real-life implementations such as Trade Me.
+
+If no bid has been made an auction then the view auction endpoint currentBid key will be the starting price. Note that when inserting auctions, I do not automatically insert a starting bid in the bid table. Thus viewing bids for an auction may be an empty array if no bids have been made.
+
+I assume that the starting date or end date json keys for an update auction request are valid. That is, creation date < the end date in the database AND in the json body (if it exists) etc. Having to validate these dates by querying both the database and the json body itself is too much effort :(
+
+I assume that an end date in an auction that is before the current time is invalid. That is you should not be able to create an auction that is already closed.
+
+i assume that the count parameter for view auctions is strictly greater than zero. there is no point requesting to view auctions without at least one return ( even if it is technically valid) .
+
+In general I will ignore malformed parameters for view auctions, e.g. if the request has 'seller' with value = "abc" (i.e. not an int) this bad value will be ignored rather than be flaged.
+
+I assume that 'View auctions, sorted from most recent to least recent.' means starting date not creation date of the auction.
+
+express has trouble parsing the dash in 'category-id' for viewauctions as a parameter. Thus I will check for 'categoryid' instead.
+
+in the photo endpoints i have a header that specifies whether the photo is a jpeg or png. The header is called 'Content-Type'. I expect this header in the requests as well for get photo
+
+
+Since there is no 404 error status code in view auctions, I will assume that if the startindex parameter provided by the client is to high (i.e. prevents any auctions being returned) then that is a bad request and not a server error = 400 error code.
+
+I assume that all money values going in and out of the API and mysql are in cents to meet the api specification that these values are integers. This means that some of the values provided in the sample data is invalid, but I cannot control that.
+
+if the client requests an auction with a bidder (where that bidder has made no bids) then no auctions will be returned.
+
+I assume that the 'id' in the response body of the create auction endpoint is that of the newly created auction. Simiarly this holds true for create user and create bid returning the ids of the newly created items.
+
+A user cannot change the attributes of another user, nor that of an auction they do not own, nor the photos of auctions they do not own. If they attempt this I will return an 401 - unauthorized status code. This includes auctions that don't exists.
+
+when the user logs in I assume that if they provide both their email and username, as well as their password, then this is still a valid request. I only check the username in this case, not the email.
+

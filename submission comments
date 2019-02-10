@@ -1,0 +1,33 @@
+The following is a list of revisions made to the server in the light of the results of the automated tests.
+
+
+
+1. Most of the tests (and test dependencies) were failing because the authentication functionality was incorrectly set up to handle logins based on the request body and not the request query as specified in the API (something obvious that I missed). Making a slight adjustment to the login endpoint to pass the request query and not the body solved the issue, and about 18 failing tests requiring authentication passed after that.
+
+
+
+2. Test malformed creation of users and Test whether the passwords have been obfuscated in some way.
+The original server did not parse the email string for validity as the API specification did not call for it. Strictly speaking the API states that the email parameter should be a string: "    string($email)" and to be unique. Those were the qualities the server checked. Thus the server failed the email validation test. After receiving some advice from the tutor that it would be a good idea to validate the email string (even if it was just to pass the test), it was decided to add the validation to the server. Thus A new npm dependency was require, "email-validator" that checks the email for correctness.
+
+Similarly, passwords (as specified in the API and table schema) were only to required to be strings that are less than 520 characters long. Thus testing the password for being salted, and testing that the password was no an empty string was not checked by the server and hence these two tests failed. In this regard it could be argued that indeed an empty string is a valid string (as defined under regular languages/expressions), and that an empty string satisfies the API/schema. Nevertheless checking for empty strings was implemented to satisfy that particular test. However, no where in the API was it specified that the passwords had to be salted, and in fact during the two hour group discussion with the lecturer it was explicitly stated that salting was NOT being tested for. Therefore the presence of such a test contradicts what was stated during this meeting. Because of this, and the absence of API requirements, no concessions were made to test for password salting and a strong case could be made that this test should NOT be present in the test suite. In saying that, the server implemented token salting (even through it was not required), thus if the assignment required a demonstration of such functionality, then this should satisfy this requirement by itself.
+
+
+
+3. Test unsuccessful creation of auctions, with authenticated user - Test for startDateTime of 1 January 1970.
+This test failed specifically because of a misunderstanding about whether creating an auction with a starting date before the current date was valid (there was a discussion about this issue at some stage). It was assumed this was so, thus there was a check if the end date of and auction was before the current date but not a check if the starting date was before the current date. The server was amended to check for this now.
+
+
+
+4. Test bidding for auctions (and dependent tests).
+These tests failed because of a coding bug that caused the @before hooks to fail and incorrectly added the very first bid to an auction (after checking it was >= the starting price). All subsequent tests would fail after. Fixing these two bugs required prehaps the most refactoring of the code. Strictly speaking, no new functionality was added to the server, only refactoring to fix existing broken functionality. It seems prudent to highlight this distinction here.
+
+
+
+5. Manage the photos (JPEG and PNG) of an auction.
+Both the failing tests for this section was for sending of the default photo because of an error in the return function for getPhoto in line 81 of the code. The return function was incorrectly stated to be
+"return done(false, "Not Found", "image/jpeg");" when it should be "return done(false, result, "image/jpeg");".
+
+
+
+6. Test search of auctions - Should return auctions containing the word "umbrella" i.e. execute /auctions with q=umbrella
+This test failed as the sql statement for the search parameter q had been incorrectly stated as "q = ?" when it should have been "q LIKE '%" + q + "%'" (using string concatenation). Reviewing the sql statement showed that the original statement would always fail unless the auction description = q. This was a real flaw in the original server.
